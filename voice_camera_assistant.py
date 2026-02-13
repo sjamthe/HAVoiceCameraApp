@@ -12,6 +12,7 @@ import logging
 import json
 import base64
 import signal
+import os
 
 # Configure logging
 logging.basicConfig(
@@ -92,12 +93,23 @@ class VoiceCameraAssistant:
             return None
     
     async def notify_homeassistant(self, message, title="Voice Camera Assistant"):
-        """Send notification to Home Assistant"""
-        url = f"http://{self.config['ha_host']}:{self.config['ha_port']}/api/services/notify/persistent_notification"
+        """Send notification via the Supervisor API proxy"""
+        # Internal Supervisor URL
+        url = "http://supervisor/core/api/services/persistent_notification/create"
+        
+        # Get the token automatically injected by the Supervisor
+        token = os.environ.get("SUPERVISOR_TOKEN")
+        
+        if not token:
+            logger.error("SUPERVISOR_TOKEN not found! Is 'hassio_api: true' in config.yaml?")
+            return False
+
         headers = {
-            "Authorization": f"Bearer {self.config['ha_token']}",
-            "Content-Type": "application/json"
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+            "X-Hass-Source": "trusted"  # This helps identify the request as internal
         }
+        
         payload = {
             "message": message,
             "title": title
@@ -106,12 +118,14 @@ class VoiceCameraAssistant:
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(url, json=payload, headers=headers) as response:
-                    if response.status == 200:
-                        logger.info("✓ Notification sent to Home Assistant")
+                    if response.status in [200, 201]:
+                        logger.info("✓ Notification sent via Supervisor API")
                         return True
                     else:
-                        error = await response.text()
-                        logger.error(f"Failed to send notification ({response.status}): {error}")
+                        error_text = await response.text()
+                        logger.error(f"Failed to send notification ({response.status}): {error_text}")
+                        # If it's still 401, the token provided by Supervisor doesn't have 
+                        # permission for this specific service.
                         return False
         except Exception as e:
             logger.error(f"Error sending notification: {e}")
@@ -192,6 +206,19 @@ class VoiceCameraAssistant:
         logger.info(f"  Health:  GET  http://local-voice-camera-assistant:{port}/health")
     
     async def run(self):
+        # --- ADD DEBUG LOGS HERE ---
+        token = os.environ.get("SUPERVISOR_TOKEN")
+        logger.info("Checking environment...")
+        if token:
+            logger.info(f"SUPERVISOR_TOKEN found! (Length: {len(token)})")
+        else:
+            logger.error("SUPERVISOR_TOKEN is MISSING! Is hassio_api: true set?")
+        
+        logger.info(f"HASS_SOURCE: {os.environ.get('HASS_SOURCE', 'Not set')}")
+        # ---------------------------
+
+        logger.info("\n" + "="*70)
+        logger.info("🚀 Voice Camera Assistant Starting")
         """Main run loop"""
         logger.info("\n" + "="*70)
         logger.info("🚀 Voice Camera Assistant Starting (HTTP Trigger Mode)")

@@ -1,0 +1,26 @@
+name: Voice Camera Assistant
+version: "2.0.0"
+slug: voice_camera_assistant
+description: Voice-activated camera assistant with Gemini AI (uses Home Assistant Assist pipeline)
+arch:
+  - armhf
+  - armv7
+  - aarch64
+  - amd64
+  - i386
+init: false
+startup: application
+boot: auto
+hassio_api: true
+homeassistant_api: true
+options:
+  ipwebcam_host: "192.168.86.36"
+  ipwebcam_port: 8080
+  gemini_api_key: ""
+  gemini_model: "gemini-flash-latest"
+schema:
+  ipwebcam_host: str
+  ipwebcam_port: int
+  gemini_api_key: str
+  gemini_model: str
+host_network: true
