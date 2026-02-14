@@ -1,0 +1,31 @@
+# This one script when triggered takes picture, sends to AI and sends response to phone. No programming needed.
+sequence:
+  - action: ai_task.generate_data
+    metadata: {}
+    data:
+      task_name: ask AI for nexus image
+      instructions: Do you see a dog in the image? Just say 'Yes' or 'No' in response.
+      entity_id: ai_task.google_ai_task
+      attachments:
+        media_content_id: media-source://camera/camera.192_168_86_36
+        media_content_type: application/vnd.apple.mpegurl
+        metadata:
+          title: Nexus cam
+          thumbnail: /api/camera_proxy/camera.192_168_86_36
+          media_class: video
+          children_media_class: null
+          navigateIds:
+            - {}
+            - media_content_type: app
+              media_content_id: media-source://camera
+    response_variable: nexus_cam_desc
+    continue_on_error: true
+  - action: notify.mobile_app_pixel_8_pro
+    metadata: {}
+    data:
+      title: Nexus Camera Dog?
+      message: "{{ nexus_cam_desc.data }}"
+      data:
+        image: /api/camera_proxy/camera.192_168_86_36
+alias: what is on nexus cam
+description: ""
