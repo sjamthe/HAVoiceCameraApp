@@ -1,0 +1,28 @@
+alias: "Frigate: Something Detected with Image and Clip"
+trigger:
+  - platform: mqtt
+    topic: frigate/events
+condition:
+  - condition: template
+    value_template: >
+      {{ trigger.payload_json['after']['camera'] == 'backyard_cam' and 
+         trigger.payload_json['type'] == 'new' }}
+action:
+  - service: notify.mobile_app_pixel_8_pro
+    data:
+      title: "Spotted {{trigger.payload_json['after']['label']}}: Backyard"
+      message: "AI detected a {{trigger.payload_json['after']['label']}}. Tap to view."
+      data:
+        # We use the full internal/external URL capability of the HA app
+        image: "/api/frigate/notifications/{{trigger.payload_json['after']['id']}}/snapshot.jpg?bbox=1"
+        # Clicking the notification opens the Event in HA
+        clickAction: "/api/frigate/notifications/{{trigger.payload_json['after']['id']}}/clip.mp4"
+        tag: "{{trigger.payload_json['after']['id']}}"
+        # This adds the specific buttons for Video and the Dashboard
+        actions:
+          - action: "URI"
+            title: "View Clip"
+            uri: "/api/frigate/notifications/{{trigger.payload_json['after']['id']}}/clip.mp4"
+          - action: "URI"
+            title: "Open Frigate"
+            uri: "/api/frigate"
