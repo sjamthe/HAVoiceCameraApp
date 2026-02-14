@@ -1,10 +1,12 @@
 # This one script when triggered takes picture, sends to AI and sends response to phone. No programming needed.
+# click action points to a dashboard called nexus-cam that has camera video stream.
+# ai_task.google_ai_task is an entity points to a specific gemini flash 2.5 model, can be changed.
 sequence:
   - action: ai_task.generate_data
     metadata: {}
     data:
       task_name: ask AI for nexus image
-      instructions: Do you see a dog in the image? Just say 'Yes' or 'No' in response.
+      instructions: Describe the image in one line
       entity_id: ai_task.google_ai_task
       attachments:
         media_content_id: media-source://camera/camera.192_168_86_36
@@ -20,12 +22,43 @@ sequence:
               media_content_id: media-source://camera
     response_variable: nexus_cam_desc
     continue_on_error: true
-  - action: notify.mobile_app_pixel_8_pro
-    metadata: {}
-    data:
-      title: Nexus Camera Dog?
-      message: "{{ nexus_cam_desc.data }}"
-      data:
-        image: /api/camera_proxy/camera.192_168_86_36
-alias: what is on nexus cam
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ nexus_cam_desc is defined and nexus_cam_desc.data is defined }}"
+        sequence:
+          - action: notify.mobile_app_pixel_8_pro
+            data:
+              title: Nexus Camera Update
+              message: "{{ nexus_cam_desc.data }}"
+              data:
+                image: /api/camera_proxy/camera.192_168_86_36
+                clickAction: "/nexus-cam/0"
+      - conditions:
+          - condition: template
+            value_template: >-
+              {{ states('camera.192_168_86_36') in ['unavailable', 'unknown',
+              'off'] }}
+        sequence:
+          - action: notify.mobile_app_pixel_8_pro
+            data:
+              title: Camera Connection Error
+              message: >-
+                Failed to perform action: The camera is currently {{
+                states('camera.192_168_86_36') }}. Unable to get image.
+              data:
+                image: /api/camera_proxy/camera.192_168_86_36
+                clickAction: "/nexus-cam/0"
+    default:
+      - action: notify.mobile_app_pixel_8_pro
+        metadata: {}
+        data:
+          message: >-
+            The camera is online, but the AI task failed to process the image.
+            Check your API quota or connection.
+          title: AI Task Failed
+          data:
+            image: /api/camera_proxy/camera.192_168_86_36
+            clickAction: "/nexus-cam/0"
+alias: AI detects cam image and notifies
 description: ""
