@@ -1,0 +1,72 @@
+version: 0.16-0 # Updated to the correct standard versioning
+
+go2rtc:
+  streams:
+    wyze_pan_cam:
+      - rtsp://admin:Fen5ster@192.168.86.35:8554/unicast#video=copy#audio=copy
+
+mqtt:
+  enabled: true
+  host: core-mosquitto
+  user: mqtt-user
+  password: mqtt-password
+
+detectors:
+  coral:
+    type: edgetpu
+    device: usb
+
+ffmpeg:
+  hwaccel_args: preset-rpi-64-h264
+
+cameras:
+  backyard_cam:
+    ffmpeg:
+      inputs:
+        - path: rtsp://sjamthe:0nly4Tapocam#@192.168.86.37:554/stream1
+          roles:
+            - record
+        - path: rtsp://sjamthe:0nly4Tapocam#@192.168.86.37:554/stream2
+          roles:
+            - detect
+    detect:
+      enabled: true
+      width: 640
+      height: 360
+      fps: 5
+    objects:
+      track:
+        - person
+        - dog
+      filters:
+        dog:
+          threshold: 0.6
+    record:
+      enabled: true
+      retain:
+        days: 3
+        mode: motion
+    snapshots:
+      enabled: true
+
+  wyze_pan_cam:
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/wyze_pan_cam
+          roles:
+            - detect
+            - record
+      output_args:
+        detect: -f rawvideo -pix_fmt yuv420p -vf scale=640:360
+    # FIX: These MUST be indented under wyze_pan_cam
+    detect:
+      enabled: true
+      width: 640
+      height: 360
+      fps: 5
+    objects:
+      track:
+        - person
+        - dog
+    record:
+      enabled: true
