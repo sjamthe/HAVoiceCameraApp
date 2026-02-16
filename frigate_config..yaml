@@ -1,10 +1,14 @@
 version: 0.16-0 # Updated to the correct standard versioning
 
-go2rtc:
+go2rtc: # create local streams so dashboard is fast and reduce CPU
   streams:
-    wyze_pan_cam:
-      - rtsp://admin:Fen5ster@192.168.86.35:8554/unicast#video=copy#audio=copy
-
+    wyze_pan_cam_hd:
+      - rtsp://admin:Fen5ster@192.168.86.35:8554/unicast
+      - "ffmpeg:wyze_pan_cam_hd#audio=aac" # conver audio to AAC to hear and reduce CPU
+    wyze_pan_cam_sd:
+      - rtsp://admin:Fen5ster@192.168.86.35:8555/unicast
+      - "ffmpeg:wyze_pan_cam_sd#audio=aac"
+      
 mqtt:
   enabled: true
   host: core-mosquitto
@@ -23,7 +27,7 @@ cameras:
   backyard_cam:
     ffmpeg:
       inputs:
-        - path: rtsp://sjamthe:0nly4Tapocam#@192.168.86.37:554/stream1
+        - path: rtsp://sjamthe:0nly4Tapocam@192.168.86.37:554/stream1
           roles:
             - record
         - path: rtsp://sjamthe:0nly4Tapocam#@192.168.86.37:554/stream2
@@ -44,7 +48,7 @@ cameras:
     record:
       enabled: true
       retain:
-        days: 3
+        days: 1
         mode: motion
     snapshots:
       enabled: true
@@ -52,13 +56,12 @@ cameras:
   wyze_pan_cam:
     ffmpeg:
       inputs:
-        - path: rtsp://127.0.0.1:8554/wyze_pan_cam
+        - path: rtsp://127.0.0.1:8554/wyze_pan_cam_sd # Use SD for AI
           roles:
             - detect
+        - path: rtsp://127.0.0.1:8554/wyze_pan_cam_hd # Use HD for Recording
+          roles:
             - record
-      output_args:
-        detect: -f rawvideo -pix_fmt yuv420p -vf scale=640:360
-    # FIX: These MUST be indented under wyze_pan_cam
     detect:
       enabled: true
       width: 640
@@ -68,5 +71,13 @@ cameras:
       track:
         - person
         - dog
+      filters:
+        dog:
+          threshold: 0.6
     record:
+      enabled: true
+      retain:
+        days: 1
+        mode: motion
+    snapshots:
       enabled: true
