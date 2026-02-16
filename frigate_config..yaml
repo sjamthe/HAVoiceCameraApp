@@ -1,13 +1,26 @@
 version: 0.16-0 # Updated to the correct standard versioning
 
+# NOTE: Use only SD streams for detection to reduce CPU load, but use HD streams for recording and snapshots. This is configured in the ffmpeg inputs for each camera below.
+
 go2rtc: # create local streams so dashboard is fast and reduce CPU
+  # This section ensures the RTSP server is actually running
+  rtsp:
+    listen: ":8554"
   streams:
     wyze_pan_cam_hd:
+      # Only pull video as audio is broken on this cam
       - rtsp://admin:Fen5ster@192.168.86.35:8554/unicast
-      - "ffmpeg:wyze_pan_cam_hd#audio=aac" # conver audio to AAC to hear and reduce CPU
+      - "ffmpeg:wyze_pan_cam_hd#audio=aac" # convert audio to AAC to hear and reduce CPU
     wyze_pan_cam_sd:
       - rtsp://admin:Fen5ster@192.168.86.35:8555/unicast
-      - "ffmpeg:wyze_pan_cam_sd#audio=aac"
+      - "ffmpeg:wyze_pan_cam_sd#audio=aac" # convert audio to AAC to hear and reduce CPU
+
+    backyard_cam_hd:
+      - rtsp://sjamthe:0nly4Tapocam@192.168.86.37:554/stream1
+      - "ffmpeg:backyard_cam_hd#audio=aac"
+    backyard_cam_sd:
+      - rtsp://sjamthe:0nly4Tapocam@192.168.86.37:554/stream2
+      - "ffmpeg:backyard_cam_sd#audio=aac"
       
 mqtt:
   enabled: true
@@ -24,13 +37,14 @@ ffmpeg:
   hwaccel_args: preset-rpi-64-h264
 
 cameras:
-  backyard_cam:
+  wyze_pan_cam:
+    enabled: true
     ffmpeg:
       inputs:
-        - path: rtsp://sjamthe:0nly4Tapocam@192.168.86.37:554/stream1
+        - path: rtsp://127.0.0.1:8554/wyze_pan_cam_hd # Use HD for Recording
           roles:
             - record
-        - path: rtsp://sjamthe:0nly4Tapocam#@192.168.86.37:554/stream2
+        - path: rtsp://127.0.0.1:8554/wyze_pan_cam_sd
           roles:
             - detect
     detect:
@@ -53,15 +67,16 @@ cameras:
     snapshots:
       enabled: true
 
-  wyze_pan_cam:
+  backyard_cam:
+    enabled: true
     ffmpeg:
       inputs:
-        - path: rtsp://127.0.0.1:8554/wyze_pan_cam_sd # Use SD for AI
-          roles:
-            - detect
-        - path: rtsp://127.0.0.1:8554/wyze_pan_cam_hd # Use HD for Recording
+        - path: rtsp://127.0.0.1:8554/backyard_cam_hd
           roles:
             - record
+        - path: rtsp://127.0.0.1:8554/backyard_cam_sd
+          roles:
+            - detect
     detect:
       enabled: true
       width: 640
